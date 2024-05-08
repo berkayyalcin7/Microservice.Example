@@ -1,6 +1,5 @@
 using MassTransit;
-using Microsoft.EntityFrameworkCore;
-using Order.API.Models;
+using Stock.API.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -8,11 +7,8 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
-
-
-builder.Services.AddDbContext<OrderAPIDbContext>(
-    options => options.UseSqlServer(builder.Configuration.GetConnectionString("SQLServer")));
-
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen();
 
 builder.Services.AddMassTransit(configurator =>
 {
@@ -23,11 +19,10 @@ builder.Services.AddMassTransit(configurator =>
 });
 
 
-
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+builder.Services.AddSingleton<MongoDBService>();
 
 var app = builder.Build();
+
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
