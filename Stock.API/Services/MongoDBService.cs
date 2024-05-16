@@ -12,5 +12,8 @@ namespace Stock.API.Services
 
             _mongoDb = client.GetDatabase("StockAPIDB");
         }
+
+        // Hangi entity' veriyorsak ona göre collection'ı çekecek.
+        public IMongoCollection<T> GetCollection<T>() => _mongoDb.GetCollection<T>(typeof(T).Name.ToLowerInvariant());
     }
 }
