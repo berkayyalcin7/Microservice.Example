@@ -27,10 +27,21 @@ public StockReservedEventConsumer(IPublishEndpoint publishEndpoint)
 
                 _publishEndpoint.Publish(paymentCompletedEvent);
 
+                Console.WriteLine("Ödeme Başarılı ....");
+
             }
             else
             {
                 // Ödemede sıkıntı olduğu.
+                PaymentFailedEvent paymentFailedEvent = new()
+                {
+                    OrderId = context.Message.OrderId,
+                    Message="Ödeme Başarısız oldu."
+                };
+
+                _publishEndpoint.Publish(paymentFailedEvent);
+
+                Console.WriteLine("Ödeme Başarısız ....");
             }
 
 

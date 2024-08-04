@@ -41,10 +41,10 @@ var collection = mondoDbService.GetCollection<Stock.API.Models.Entities.Stock>()
 
 if (!collection.FindSync(s => true).Any())
 {
-    await collection.InsertOneAsync(new() { ProductId = Guid.NewGuid(), Count = 100 });
-    await collection.InsertOneAsync(new() { ProductId = Guid.NewGuid(), Count = 3300 });
-    await collection.InsertOneAsync(new() { ProductId = Guid.NewGuid(), Count = 4500 });
-    await collection.InsertOneAsync(new() { ProductId = Guid.NewGuid(), Count = 5871 });
+    await collection.InsertOneAsync(new() { ProductId = new Guid("51129D62-C168-4AA3-8942-12A11679A503"), Count = 100 });
+    await collection.InsertOneAsync(new() { ProductId = new Guid("C0A4C4C7-E63A-4B5D-B28F-9A497018B9CC"), Count = 3300 });
+    await collection.InsertOneAsync(new() { ProductId = new Guid("FF6D37C5-6358-4A84-A766-3533B3098924"), Count = 4500 });
+    await collection.InsertOneAsync(new() { ProductId = new Guid("A056D79B-4312-4E75-87FD-684E8E1987C4 "), Count = 5871 });
 }
 #endregion
 
