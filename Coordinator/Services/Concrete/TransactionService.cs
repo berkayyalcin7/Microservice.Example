@@ -2,6 +2,7 @@
 using Coordinator.Models.Contexts;
 using Coordinator.Services.Abstractions;
 using Microsoft.EntityFrameworkCore;
+using System.Xml.Linq;
 
 namespace Coordinator.Services.Concrete
 {
@@ -62,24 +63,81 @@ namespace Coordinator.Services.Concrete
 
             await _context.SaveChangesAsync();
         }
-        public Task<bool> CheckReadyServicesAsync(Guid transactionId)
+        public async Task<bool> CheckReadyServicesAsync(Guid transactionId)
         {
-            throw new NotImplementedException();
+           return (await _context.NodeState.Where(ns => ns.TransactionId == transactionId).ToListAsync()).TrueForAll(ns=>ns.IsReady==Enums.ReadyType.Ready);
         }
 
-        public Task CommitAsync(Guid transactionId)
+        public async Task CommitAsync(Guid transactionId)
         {
-            throw new NotImplementedException();
+            var transactionNodes = await _context.NodeState
+                .Where(ns=>ns.TransactionId==transactionId)
+                .Include(ns=>ns.Node).ToListAsync();
+
+            foreach (var tNode in transactionNodes)
+            {
+                try
+                {
+                    var response = await (tNode.Node.Name switch
+                    {
+                        "Order.API" => _orderHttpClient.GetAsync("commit"),
+                        "Stock.API" => _stockHttpClient.GetAsync("commit"),
+                        "Payment.API" => _paymentHttpClient.GetAsync("commit"),
+                    });
+
+                    var result = bool.Parse(await response.Content.ReadAsStringAsync());
+                    // Gelen cevaba göre ilgili servis Tamam mı , İptal mi
+                    tNode.TransactionState= result ? Enums.TransactionState.Done: Enums.TransactionState.Abort;
+
+                }
+                catch (Exception)
+                {
+                    tNode.TransactionState= Enums.TransactionState.Abort;
+                }
+            }
+
+            await _context.SaveChangesAsync();
         }
 
-        public Task<bool> CheckTransactionStateServicesAsync(Guid transactionId)
-        {
-            throw new NotImplementedException();
-        }
+        public async Task<bool> CheckTransactionStateServicesAsync(Guid transactionId)
+            => (await _context.NodeState.
+                    Where(ns => ns.TransactionId == transactionId)
+                    .ToListAsync())
+                    .TrueForAll(ns=>ns.TransactionState==Enums.TransactionState.Done);
 
-        public Task RollBackAsync(Guid transactionId)
+        public async Task RollBackAsync(Guid transactionId)
         {
-            throw new NotImplementedException();
+            var transactionNodes = await _context.NodeState
+                .Include(ns=>ns.Node)
+                .Where(ns => ns.TransactionId == transactionId)
+                .ToListAsync();
+
+            foreach (var transactionNode in transactionNodes)
+            {
+                try
+                {
+                    // Rollback talimatı tamamlananlara verilecek , geri almak için
+                    if (transactionNode.TransactionState==Enums.TransactionState.Done)
+                    {
+                       _ =  await (transactionNode.Node.Name switch
+                        {
+                            "Order.API" => _orderHttpClient.GetAsync("rollback"),
+                            "Stock.API" => _stockHttpClient.GetAsync("rollback"),
+                            "Payment.API" => _paymentHttpClient.GetAsync("rollback"),
+                        });
+                        // İşlem başarısız olduğu için Abort çevir.
+                        transactionNode.TransactionState= Enums.TransactionState.Abort;
+                    }
+
+                   await _context.SaveChangesAsync();
+                }
+                catch (Exception)
+                {
+
+                    throw;
+                }
+
+            }
         }
     }
 }

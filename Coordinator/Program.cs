@@ -1,4 +1,6 @@
 using Coordinator.Models.Contexts;
+using Coordinator.Services.Abstractions;
+using Coordinator.Services.Concrete;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -14,6 +16,8 @@ builder.Services.AddHttpClient("OrderAPI", client => client.BaseAddress = new Ur
 builder.Services.AddHttpClient("StockAPI", client => client.BaseAddress = new Uri("https://localhost:7013"));
 builder.Services.AddHttpClient("PaymentAPI", client => client.BaseAddress = new Uri("https://localhost:7048"));
 
+builder.Services.AddSingleton<ITransactionService, TransactionService>();
+
 
 var app = builder.Build();
 
@@ -26,25 +30,26 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
-var summaries = new[]
+app.MapGet("/create-order-transaction", async (ITransactionService transactionService) =>
 {
-    "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
-};
+    // Phase 1 
+    var transactionId = await transactionService.CreateTransactionAsync();
+    // Servisleri hazýrla
+    await transactionService.PrepareServicesAsync(transactionId);
+    // Kontrol
+    bool transactionState = await transactionService.CheckTransactionStateServicesAsync(transactionId);
 
-app.MapGet("/weatherforecast", () =>
-{
-    var forecast = Enumerable.Range(1, 5).Select(index =>
-        new WeatherForecast
-        (
-            DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
-            Random.Shared.Next(-20, 55),
-            summaries[Random.Shared.Next(summaries.Length)]
-        ))
-        .ToArray();
-    return forecast;
-})
-.WithName("GetWeatherForecast")
-.WithOpenApi();
+    if (transactionState)
+    {
+        await transactionService.CommitAsync(transactionId);
+
+        transactionState = await transactionService.CheckTransactionStateServicesAsync(transactionId);
+    }
+    if (!transactionState)
+    {
+        await transactionService.RollBackAsync(transactionId);
+    }
+});
 
 app.Run();
 
