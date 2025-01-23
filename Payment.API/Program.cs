@@ -12,31 +12,37 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 
-builder.Services.AddMassTransit(configurator =>
-{
-    configurator.AddConsumer<StockReservedEventConsumer>();
+//builder.Services.AddMassTransit(configurator =>
+//{
+//    configurator.AddConsumer<StockReservedEventConsumer>();
 
-    configurator.UsingRabbitMq((context, _configurator) =>
-    {
-        _configurator.Host(builder.Configuration["RabbitMQ"]);
-        // Kuyruk isimleri uygun formatta merkezi yerde tutulmalý
-        _configurator.ReceiveEndpoint(RabbitMQSettings.Payment_StockReservedEventQueue, e => e.ConfigureConsumer<StockReservedEventConsumer>(context));
-    });
-});
+//    configurator.UsingRabbitMq((context, _configurator) =>
+//    {
+//        _configurator.Host(builder.Configuration["RabbitMQ"]);
+//        // Kuyruk isimleri uygun formatta merkezi yerde tutulmalý
+//        _configurator.ReceiveEndpoint(RabbitMQSettings.Payment_StockReservedEventQueue, e => e.ConfigureConsumer<StockReservedEventConsumer>(context));
+//    });
+//});
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
+
+app.MapGet("/ready", () =>
 {
-    app.UseSwagger();
-    app.UseSwaggerUI();
-}
+    Console.WriteLine("Payment service is ready");
+    return true;
+});
 
-app.UseHttpsRedirection();
+app.MapGet("/commit", () =>
+{
+    Console.WriteLine("Payment service is committed");
+    return true;
+});
 
-app.UseAuthorization();
+app.MapGet("/rollback", () =>
+{
+    Console.WriteLine("Payment service is rollbacked");
+});
 
-app.MapControllers();
 
 app.Run();

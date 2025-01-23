@@ -10,13 +10,14 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
+
 builder.Services.AddDbContext<TwoPhaseCommitContext>(options => options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-builder.Services.AddHttpClient("OrderAPI", client => client.BaseAddress = new Uri("https://localhost:7247"));
-builder.Services.AddHttpClient("StockAPI", client => client.BaseAddress = new Uri("https://localhost:7013"));
-builder.Services.AddHttpClient("PaymentAPI", client => client.BaseAddress = new Uri("https://localhost:7048"));
+builder.Services.AddHttpClient("Order.API", client => client.BaseAddress = new Uri("https://localhost:7247"));
+builder.Services.AddHttpClient("Stock.API", client => client.BaseAddress = new Uri("https://localhost:7013"));
+builder.Services.AddHttpClient("Payment.API", client => client.BaseAddress = new Uri("https://localhost:7048"));
 
-builder.Services.AddSingleton<ITransactionService, TransactionService>();
+builder.Services.AddTransient<ITransactionService, TransactionService>();
 
 
 var app = builder.Build();
@@ -37,7 +38,7 @@ app.MapGet("/create-order-transaction", async (ITransactionService transactionSe
     // Servisleri hazýrla
     await transactionService.PrepareServicesAsync(transactionId);
     // Kontrol
-    bool transactionState = await transactionService.CheckTransactionStateServicesAsync(transactionId);
+    bool transactionState = await transactionService.CheckReadyServicesAsync(transactionId);
 
     if (transactionState)
     {
@@ -52,8 +53,3 @@ app.MapGet("/create-order-transaction", async (ITransactionService transactionSe
 });
 
 app.Run();
-
-internal record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
-{
-    public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
-}
